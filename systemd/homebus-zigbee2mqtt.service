@@ -1,0 +1,17 @@
+[Unit]
+Description=Homebus Zigbee2MQTT
+After=network.target
+
+[Service]
+Type=simple
+
+User=app
+WorkingDirectory=/home/app/homebus-zigbee2mqtt
+
+ExecStart=/home/app/.rbenv/bin/rbenv exec bundle exec homebus-zigbee2mqtt.rb
+TimeoutSec=30
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
