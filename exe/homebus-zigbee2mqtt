@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+require 'homebus-zigbee2mqtt/options'
+require 'homebus-zigbee2mqtt/app'
+
+options = HomebusZigbee2mqtt::Options.new
+app = HomebusZigbee2mqtt::App.new(options.options)
+app.run!
+

@@ -1,6 +1,8 @@
 require 'homebus/options'
 
-class Zigbee2MQTTHomebusOptions < Homebus::Options
+require 'homebus-zigbee2mqtt/version'
+
+class HomebusZigbee2mqtt::Options < Homebus::Options
   def app_options(op)
   end
 
@@ -9,10 +11,10 @@ class Zigbee2MQTTHomebusOptions < Homebus::Options
   end
 
   def version
-    '0.0.1'
+    HomebusZigbee2mqtt::VERSION
   end
 
   def name
-    'homebus-netatmo'
+    'homebus-zigbee2mqtt'
   end
 end
