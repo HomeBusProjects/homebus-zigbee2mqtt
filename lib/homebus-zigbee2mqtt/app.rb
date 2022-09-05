@@ -25,25 +25,25 @@ class HomebusZigbee2mqtt::App < Homebus::App
   end
 
   def setup!
-    @zigbee_broker_hostname = ENV['ZIGBEE_BROKER_hostname']
-    uri = URI(@zigbee_broker_hostname)
+    @zigbee_broker_url = ENV['ZIGBEE_BROKER_URL']
+    uri = URI(@zigbee_broker_url)
 
-    zigbee_mqtt_client = PahoMqtt::Client.new({host: uri.host,
+    @zigbee_mqtt_client = PahoMqtt::Client.new({host: uri.host,
                                                port: uri.port,
                                                username: uri.user,
                                                password: uri.password,
                                                reconnect_limit: 0,
                                                reconnect_delay: 5,
                                                persistent: true,
-                                               ssl: u.scheme == 'mqtts'})
+                                               ssl: uri.scheme == 'mqtts'})
 
-    zigbee_mqtt_client.connect
-    zigbee_mqtt_client.subscribe 'zigbee2mqtt/bridge/devices'
+    @zigbee_mqtt_client.connect
+    @zigbee_mqtt_client.subscribe 'zigbee2mqtt/bridge/devices'
 
     # if needed we can request a refresh of the devices by publishing to
     # 'zigbee2mqtt/bridge/config/devices/get'
     # but devices are published with retain so if all is working well we should see them
-    zigbee_mqtt_client.on_message do |message|
+    @zigbee_mqtt_client.on_message do |message|
       json = JSON.parse(message.payload, symbolize_names: true)
 
       if @options[:verbose]
@@ -58,8 +58,10 @@ class HomebusZigbee2mqtt::App < Homebus::App
       end
 
       _process_zigbee_differences(zigbee_map)
-      break
     end
+
+      @zigbee_mqtt_client.loop_read
+      @zigbee_mqtt_client.loop_read
   end
 
   # published to zigbee2mqtt/Garage Temperature
@@ -69,9 +71,9 @@ class HomebusZigbee2mqtt::App < Homebus::App
   # {"battery":100,"humidity":44.58,"linkquality":255,"pressure":1030.3,"temperature":21.01,"voltage":3025}
   # {"battery":0,"humidity":44.56,"linkquality":255,"temperature":21.55,"voc":242,"voltage":2800}
   def work!
-#    zigbee_mqtt_client = MQTT::Client.connect(@zigbee_broker_url)
-    zigbee_mqtt_client.subscribe 'zigbee2mqtt/#'
-    zigbee_mqtt_client.on_message do |message|
+#    @zigbee_mqtt_client = MQTT::Client.connect(@zigbee_broker_url)
+    @zigbee_mqtt_client.subscribe 'zigbee2mqtt/#'
+    @zigbee_mqtt_client.on_message do |message|
       if ['zigbee2mqtt/bridge/groups', 'zigbee2mqtt/bridge/extensions', 'zigbee2mqtt/bridge/config', 'zigbee2mqtt/bridge/info'].include? message.topic
         next
       end
@@ -83,40 +85,40 @@ class HomebusZigbee2mqtt::App < Homebus::App
       msg = JSON.parse message.payload, symbolize_names: true
 
       if @options[:verbose]
-        pp topic, msg
+        pp message.topic, message.payload
       end
 
       # should "reprocess" devices here and add new ones and delete removed ones
-      if topic == 'zigbee2mqtt/bridge/devices'
+      if message.topic == 'zigbee2mqtt/bridge/devices'
         #        _process_devices(msg)
         next
       end
 
-      zigbee_id = _get_zigbee_id(topic)
+      zigbee_id = _get_zigbee_id(message.topic)
       device = _find_device(zigbee_id)
       unless device
         puts "no device found #{zigbee_id}"
         next
       end
 
-      if msg.has_key?(:occupancy)
-        _process_occupancy(device, msg)
+      if message.payload.has_key?(:occupancy)
+        _process_occupancy(device, message.payload)
       end
 
-      if msg.has_key?(:contact)
-        _process_contact(device, msg)
+      if message.payload.has_key?(:contact)
+        _process_contact(device, message.payload)
       end
 
-      if msg.has_key?(:humidity)
-        _process_air(device, msg)
+      if message.payload.has_key?(:humidity)
+        _process_air(device, message.payload)
       end
 
-      if msg.has_key?(:illuminance_lux)
-        _process_light(device, msg)
+      if message.payload.has_key?(:illuminance_lux)
+        _process_light(device, message.payload)
       end
 
-      if msg.has_key?(:voc)
-        _process_voc(device, msg)
+      if message.payload.has_key?(:voc)
+        _process_voc(device, message.payload)
       end
     end
 
